@@ -7,7 +7,7 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st
 from utils.style import inject_custom_css, card_html, card_back_html
-from utils.tarot_logic import SPREADS, create_reading, get_synthesis, answer_followup
+from utils.tarot_logic import SPREADS, create_reading, answer_followup
 from utils.pdf_export import create_tarot_pdf
 
 st.set_page_config(page_title="Tarot • Wróżka", page_icon="🃏", layout="wide")
@@ -50,7 +50,7 @@ st.markdown("---")
 if st.button("✨ Rozłóż karty", use_container_width=True, type="primary"):
     with st.spinner("Tasuję talię i skupiam intencję..."):
         reading = create_reading(spread_key, question)
-        reading["synthesis"] = get_synthesis(reading["cards"])
+        # synteza już jest w reading (zależna od pytania i kart)
         if not allow_reversed:
             for c in reading["cards"]:
                 c["is_reversed"] = False
@@ -119,12 +119,16 @@ if "current_reading" in st.session_state:
             with st.expander(f"{'↺ ' if card['is_reversed'] else ''}{card['name_pl']} — {card['position']}", expanded=(n <= 3)):
                 orient = "odwrócona" if card["is_reversed"] else "prosta"
                 st.markdown(f"**Orientacja:** {orient}")
-                st.markdown(f"**Znaczenie w tej pozycji:** {card['meaning']}")
-                st.markdown(f"**Co mówi pozycja „{card['position']}”?**  \n{card.get('position_guidance', '')}")
+                # Indywidualny, kontekstowy opis
+                detailed = card.get("detailed") or card["meaning"]
+                st.markdown(detailed)
+                st.markdown("---")
+                st.markdown(f"**Krótkie znaczenie karty:** {card['meaning']}")
+                st.markdown(f"**Rola pozycji „{card['position']}”:** {card.get('position_guidance', '')}")
                 if card["arcana"] == "Wielkie":
-                    st.markdown("*To Wielkie Arkanum — energia o większej wadze, często związana z ważnymi życiowymi tematami.*")
+                    st.markdown("*Wielkie Arkanum — temat o większej wadze, często związany z tożsamością, zmianą lub życiową lekcją.*")
                 elif card.get("suit"):
-                    st.markdown(f"*Małe Arkanum, kolor: **{card['suit']}**.*")
+                    st.markdown(f"*Małe Arkanum • kolor: **{card['suit']}***")
 
         # --- Synteza ---
         st.markdown("---")
@@ -151,7 +155,7 @@ if "current_reading" in st.session_state:
 
         if st.button("✨ Uzyskaj odpowiedź", key="btn_followup"):
             if followup_q.strip():
-                ans = answer_followup(followup_q, cards)
+                ans = answer_followup(followup_q, cards, reading.get("question", ""))
                 st.session_state.followup_answers.insert(0, {
                     "question": followup_q.strip(),
                     "answer": ans
