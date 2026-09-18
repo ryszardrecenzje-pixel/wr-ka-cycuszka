@@ -9,8 +9,8 @@ import streamlit as st
 from utils.style import inject_custom_css
 
 st.set_page_config(
-    page_title="Wróżka",
-    page_icon="🔮",
+    page_title="Wróżka Cycyuszka",
+    page_icon="( ๏ 人 ๏ )",
     layout="wide",
     initial_sidebar_state="expanded"
 )
