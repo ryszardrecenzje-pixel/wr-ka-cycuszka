@@ -8,6 +8,7 @@ if str(ROOT) not in sys.path:
 import streamlit as st
 from utils.style import inject_custom_css, card_html, card_back_html
 from utils.tarot_logic import SPREADS, create_reading, answer_followup
+from utils.ai_interpret import generate_interpretation, is_ai_available
 from utils.pdf_export import create_tarot_pdf
 
 st.set_page_config(page_title="Tarot • Wróżka", page_icon="🃏", layout="wide")
@@ -22,6 +23,22 @@ if "followup_answers" not in st.session_state:
 
 st.title("🃏 Tarot")
 st.caption("Wybierz układ, zadaj pytanie i pozwól kartom mówić. Po odsłonięciu możesz dopytać o szczegóły.")
+
+# Przełącznik AI
+ai_ready = is_ai_available()
+col_ai1, col_ai2 = st.columns([2, 1])
+with col_ai1:
+    use_ai = st.toggle(
+        "✨ Interpretacja AI (Groq)",
+        value=ai_ready,
+        disabled=not ai_ready,
+        help="Wymaga klucza GROQ_API_KEY w Secrets. Bez klucza działa lokalny silnik."
+    )
+with col_ai2:
+    if ai_ready:
+        st.success("AI gotowe", icon="✅")
+    else:
+        st.warning("Brak klucza API", icon="⚠️")
 
 # ---------- Ustawienia ----------
 col_left, col_right = st.columns([1, 1])
@@ -130,14 +147,32 @@ if "current_reading" in st.session_state:
                 elif card.get("suit"):
                     st.markdown(f"*Małe Arkanum • kolor: **{card['suit']}***")
 
-        # --- Synteza ---
+        # --- Synteza (AI lub lokalna) ---
         st.markdown("---")
         st.markdown("### 📜 Synteza odczytu")
-        st.markdown(f"""
-        <div class="card-box">
-            <p style="color:#d4c8b8; line-height:1.7; margin:0;">{reading['synthesis']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+
+        ai_text = None
+        if use_ai and ai_ready:
+            with st.spinner("Karty szeptają przez AI..."):
+                ai_text = generate_interpretation(reading)
+
+        if ai_text:
+            st.markdown(f"""
+            <div class="card-box">
+                <p style="color:#c9a227; font-size:0.85rem; margin:0 0 0.6rem 0;">✨ Interpretacja AI (Groq)</p>
+                <p style="color:#d4c8b8; line-height:1.7; margin:0; white-space:pre-wrap;">{ai_text}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            st.session_state["_last_ai_synthesis"] = ai_text
+        else:
+            st.markdown(f"""
+            <div class="card-box">
+                <p style="color:#a89bb8; font-size:0.85rem; margin:0 0 0.6rem 0;">📜 Interpretacja klasyczna</p>
+                <p style="color:#d4c8b8; line-height:1.7; margin:0;">{reading['synthesis']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            if use_ai and not ai_ready:
+                st.caption("Dodaj GROQ_API_KEY w Secrets, aby włączyć AI.")
 
         # --- Pytania dodatkowe ---
         st.markdown("---")
@@ -155,7 +190,12 @@ if "current_reading" in st.session_state:
 
         if st.button("✨ Uzyskaj odpowiedź", key="btn_followup"):
             if followup_q.strip():
-                ans = answer_followup(followup_q, cards, reading.get("question", ""))
+                ans = None
+                if use_ai and ai_ready:
+                    with st.spinner("AI odpowiada na dopytanie..."):
+                        ans = generate_interpretation(reading, followup=followup_q.strip())
+                if not ans:
+                    ans = answer_followup(followup_q, cards, reading.get("question", ""))
                 st.session_state.followup_answers.insert(0, {
                     "question": followup_q.strip(),
                     "answer": ans
