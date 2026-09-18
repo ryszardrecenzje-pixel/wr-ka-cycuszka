@@ -22,7 +22,7 @@ if "tarot_history" not in st.session_state:
 
 st.markdown("""
 <div style="text-align:center; padding: 2rem 0 1rem 0;">
-    <h1 style="font-size: 3rem; margin-bottom: 0.3rem;">🔮 Wróżka</h1>
+    <h1 style="font-size: 3rem; margin-bottom: 0.3rem;">( ๏ 人 ๏ ) Wróżka Cycyuszka</h1>
     <p style="font-size: 1.25rem; color: #a89bb8; margin-bottom: 0.5rem;">
         Twoja cyfrowa wróżka online
     </p>
