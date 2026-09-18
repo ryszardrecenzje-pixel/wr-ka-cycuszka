@@ -1,0 +1,115 @@
+{
+  "sign": "Strzelec",
+  "key": "strzelec",
+  "dzienny": {
+    "ogolna": [
+      "Dzień sprzyja odważnym decyzjom i nowym inicjatywom. Energia jest dynamiczna.",
+      "Dziś warto zwolnić i posłuchać intuicji. Dobre momenty na refleksję.",
+      "Harmonia i równowaga będą kluczem. Unikaj skrajności.",
+      "Pojawi się okazja, której nie warto marnować. Bądź czujny.",
+      "Dzień intensywnych emocji. Dbaj o swoje granice."
+    ],
+    "milosc": [
+      "W relacjach panuje ciepło. Dobry moment na szczerą rozmowę.",
+      "Możliwe niespodzianki ze strony bliskiej osoby. Bądź otwarty.",
+      "Czas na dbanie o siebie w związku. Równowaga jest ważna.",
+      "Pojawi się flama lub ożywienie w istniejącym związku.",
+      "Unikaj niepotrzebnych konfliktów. Lepiej postawić na dialog."
+    ],
+    "kariera": [
+      "Skup się na konkretnych zadaniach. Efektywność przyniesie efekty.",
+      "Możliwa propozycja współpracy lub nowy projekt.",
+      "Dzień sprzyja negocjacjom i prezentowaniu swoich pomysłów.",
+      "Uważaj na pośpiech – dokładność jest dziś ważniejsza.",
+      "Docenienie Twojej pracy może nadejść z nieoczekiwanej strony."
+    ],
+    "zdrowie": [
+      "Dbaj o regenerację i sen. Organizm potrzebuje odpoczynku.",
+      "Ruch na świeżym powietrzu przyniesie ulgę i energię.",
+      "Uważaj na przeciążenie. Słuchaj sygnałów ciała.",
+      "Dobry dzień na wprowadzenie zdrowszych nawyków.",
+      "Emocje mogą wpływać na samopoczucie – zadbaj o równowagę."
+    ],
+    "rada": [
+      "Zaufaj swojej intuicji – wie więcej niż myślisz.",
+      "Nie bój się prosić o pomoc, gdy jej potrzebujesz.",
+      "Małe kroki prowadzą do wielkich zmian.",
+      "Dziś liczy się autentyczność bardziej niż perfekcja.",
+      "Oddychaj głęboko i działaj z serca."
+    ]
+  },
+  "tygodniowy": {
+    "ogolna": [
+      "Tydzień przyniesie ważne rozmowy i decyzje. Bądź przygotowany.",
+      "Energia tygodnia sprzyja domykaniu spraw i porządkowaniu.",
+      "Pojawią się nowe możliwości – warto być elastycznym.",
+      "Tydzień intensywny emocjonalnie. Dbaj o swoje centrum.",
+      "Dobre dni na planowanie długoterminowe i strategię."
+    ],
+    "milosc": [
+      "Relacje nabiorą głębi. Czas na szczerość i bliskość.",
+      "Możliwe wyjaśnienie nieporozumień z przeszłości.",
+      "Pojawi się ktoś interesujący lub ożywi się istniejący związek.",
+      "Warto zadbać o jakość wspólnego czasu.",
+      "Unikaj grania w gry – autentyczność przyniesie najlepsze efekty."
+    ],
+    "kariera": [
+      "Tydzień sprzyja awansom, podwyżkom lub nowym projektom.",
+      "Współpraca z innymi przyniesie lepsze rezultaty niż samotna praca.",
+      "Uważaj na detale – drobne błędy mogą kosztować czas.",
+      "Dobre dni na networking i budowanie relacji zawodowych.",
+      "Twoja konsekwencja zostanie zauważona."
+    ],
+    "zdrowie": [
+      "Zadbaj o regularny sen i nawodnienie przez cały tydzień.",
+      "Warto wprowadzić krótkie przerwy na ruch w ciągu dnia.",
+      "Emocje mogą wpływać na trawienie – jedz spokojnie.",
+      "Dobry moment na badania kontrolne lub wizytę u specjalisty.",
+      "Relaks i odpoczynek są teraz tak samo ważne jak działanie."
+    ],
+    "rada": [
+      "Patrz szerzej – ten tydzień pokazuje większy obraz.",
+      "Nie spiesz się z ważnymi decyzjami – daj sobie czas.",
+      "Wdzięczność otwiera drzwi, których wcześniej nie widziałeś.",
+      "Dbaj o granice, jednocześnie pozostając otwartym.",
+      "Małe codzienne rytuały dadzą Ci stabilność."
+    ]
+  },
+  "miesieczny": {
+    "ogolna": [
+      "Miesiąc transformacji i nowych początków. Dużo energii do działania.",
+      "Czas na podsumowania i wyznaczanie nowych celów.",
+      "Miesiąc sprzyja głębokim zmianom w podejściu do życia.",
+      "Energia miesiąc a jest stabilna – idealna do budowania fundamentów.",
+      "Pojawią się ważne lekcje dotyczące relacji i własnej wartości."
+    ],
+    "milosc": [
+      "Miesiąc sprzyja pogłębianiu więzi i szczerym rozmowom.",
+      "Możliwe ważne decyzje dotyczące związku lub statusu.",
+      "Pojawi się okazja do poznania kogoś znaczącego.",
+      "Czas na uzdrawianie starych ran emocjonalnych.",
+      "Miłość wymaga teraz dojrzałości i odpowiedzialności."
+    ],
+    "kariera": [
+      "Miesiąc może przynieść awans, zmianę pracy lub nowy kierunek.",
+      "Twoja ciężka praca zacznie przynosić widoczne efekty.",
+      "Warto inwestować w rozwój umiejętności i networking.",
+      "Finanse wymagają uwagi – planowanie budżetu się opłaci.",
+      "Pojawią się propozycje, które warto rozważyć spokojnie."
+    ],
+    "zdrowie": [
+      "Zadbaj o profilaktykę i regularne badania.",
+      "Miesiąc sprzyja wprowadzeniu trwałego stylu życia.",
+      "Uważaj na przeciążenie – regeneracja jest kluczowa.",
+      "Emocje i ciało są silnie powiązane – dbaj o obie sfery.",
+      "Dobry czas na rozpoczęcie nowej aktywności fizycznej."
+    ],
+    "rada": [
+      "Słuchaj siebie bardziej niż opinii innych.",
+      "Buduj fundamenty, zamiast gonić za szybkimi efektami.",
+      "Przebaczenie (sobie i innym) otworzy nową przestrzeń.",
+      "Miesiąc nagradza konsekwencję i autentyczność.",
+      "Pamiętaj: nie musisz mieć wszystkiego pod kontrolą."
+    ]
+  }
+}
