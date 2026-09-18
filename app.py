@@ -10,7 +10,7 @@ from utils.style import inject_custom_css
 
 st.set_page_config(
     page_title="Wróżka Cycyuszka",
-    page_icon="( ๏ 人 ๏ )",
+    page_icon="✨",
     layout="wide",
     initial_sidebar_state="expanded"
 )
