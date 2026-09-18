@@ -76,3 +76,19 @@ wrozka-streamlit/
 ## Licencja
 
 MIT – używaj swobodnie.
+
+
+## Interpretacja AI (Groq) — darmowa
+
+1. Załóż konto na https://console.groq.com i utwórz API key
+2. Na Streamlit Cloud: **App settings → Secrets** dodaj:
+
+```toml
+GROQ_API_KEY = "gsk_..."
+```
+
+3. W aplikacji włącz przełącznik **Interpretacja AI (Groq)**
+
+Bez klucza działa lokalny silnik interpretacji (fallback).
+
+Model domyślny: `llama-3.1-8b-instant` (szybki, darmowy tier).
