@@ -1,8 +1,9 @@
 import json
 import random
+import re
 from pathlib import Path
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "tarot_cards.json"
 
@@ -75,145 +76,341 @@ POSITION_GUIDANCE = {
     "Ostateczny wynik": "Najbardziej prawdopodobny rezultat przy obecnym układzie sił. Pamiętaj: karty doradzają, nie rozkazują."
 }
 
-def create_reading(spread_key: str, question: str = "") -> Dict[str, Any]:
-    spread = SPREADS[spread_key]
-    cards = draw_cards(len(spread["positions"]))
-    reading = {
-        "id": datetime.now().strftime("%Y%m%d_%H%M%S"),
-        "timestamp": datetime.now().isoformat(),
-        "spread": spread_key,
-        "spread_name": spread["name"],
-        "question": question.strip() or "Brak pytania",
-        "cards": []
-    }
-    for i, card in enumerate(cards):
-        pos = spread["positions"][i]
-        reading["cards"].append({
-            **card,
-            "position": pos,
-            "position_guidance": POSITION_GUIDANCE.get(pos, "Ta pozycja wnosi ważny kontekst do odczytu.")
-        })
-    return reading
+# --- Wykrywanie tematu pytania ---
+THEME_KEYWORDS = {
+    "milosc": ["miłość", "miłości", "związek", "związku", "partner", "partnerka", "mąż", "żona",
+               "chłopak", "dziewczyna", "uczuc", "serc", "relacj", "randk", "romans", "rozstani"],
+    "kariera": ["prac", "karier", "zawod", "szef", "firm", "biznes", "pieniądz", "finans",
+                "pensj", "zarob", "stanowisk", "projekt", "klient"],
+    "zdrowie": ["zdrow", "chorob", "ból", "lekar", "terap", "sen", "stres", "energia", "samopocz"],
+    "decyzja": ["czy powinien", "czy mam", "decyz", "wybór", "wyboru", "co robić", "jak postąpić",
+                "czy warto", "czy zostawić", "czy zmienić"],
+    "czas": ["kiedy", "jak długo", "termin", "czas", "wkrótce", "kiedyś"],
+    "rozwoj": ["rozwoj", "rozwoju", "ścieżk", "cel", "sens", "duchow", "zmian", "transform"],
+}
 
-def get_synthesis(cards: List[Dict]) -> str:
+def detect_theme(question: str) -> str:
+    if not question or question == "Brak pytania":
+        return "ogolny"
+    q = question.lower()
+    scores = {theme: sum(1 for kw in kws if kw in q) for theme, kws in THEME_KEYWORDS.items()}
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else "ogolny"
+
+
+THEME_LENSES = {
+    "milosc": {
+        "intro": [
+            "W sprawach serca ten rozkład mówi wyraźnie.",
+            "Patrząc przez pryzmat relacji i uczuć,",
+            "Jeśli chodzi o bliskość i związek,",
+        ],
+        "advice": [
+            "Najważniejsza rada: nie uciekaj od szczerości — wobec siebie i drugiej osoby.",
+            "Relacja rośnie tam, gdzie jest miejsce na prawdę, nie tylko na nadzieję.",
+            "Zanim cokolwiek zdecydujesz, sprawdź, czy działasz z miłości, czy z lęku przed samotnością.",
+        ],
+    },
+    "kariera": {
+        "intro": [
+            "W kontekście pracy i materialnej stabilności układ układa się tak:",
+            "Jeśli pytasz o karierę lub finanse,",
+            "W sferze zawodowej energie wskazują na konkretny kierunek.",
+        ],
+        "advice": [
+            "Skup się na tym, co możesz kontrolować: jakość pracy, komunikację i granice.",
+            "Nie każda okazja jest Twoją okazją — wybieraj świadomie, nie z desperacji.",
+            "Konsekwencja w małych krokach często wygrywa z wielkim, ale chaotycznym zrywem.",
+        ],
+    },
+    "zdrowie": {
+        "intro": [
+            "W temacie zdrowia i samopoczucia karty zwracają uwagę na:",
+            "Ciało i psychika są tu silnie powiązane.",
+        ],
+        "advice": [
+            "Słuchaj sygnałów ciała wcześniej, niż staną się krzykiem.",
+            "Regeneracja nie jest luksusem — to warunek dalszego działania.",
+        ],
+    },
+    "decyzja": {
+        "intro": [
+            "Stoisz przed wyborem — karty nie zdejmują z Ciebie odpowiedzialności, ale rozjaśniają ścieżki.",
+            "Przy decyzji, którą rozważasz, układ pokazuje napięcia i potencjały.",
+        ],
+        "advice": [
+            "Zadaj sobie pytanie: której opcji boję się bardziej, a której naprawdę chcę?",
+            "Dobra decyzja rzadko bywa w 100% wygodna — bywa za to zgodna z Twoimi wartościami.",
+        ],
+    },
+    "czas": {
+        "intro": [
+            "Pytanie o czas w tarocie zawsze jest płynne — ważniejsze są warunki niż kalendarz.",
+        ],
+        "advice": [
+            "Zamiast szukać daty, obserwuj, czy powtarza się ten sam wzorzec. Gdy się złamie — otwiera się nowe okno.",
+        ],
+    },
+    "rozwoj": {
+        "intro": [
+            "W temacie rozwoju i wewnętrznej zmiany ten odczyt ma głębszy charakter.",
+        ],
+        "advice": [
+            "Transformacja rzadko bywa komfortowa. Jeśli czujesz opór — sprawdź, czy chroni Cię, czy blokuje.",
+        ],
+    },
+    "ogolny": {
+        "intro": [
+            "Odczyt układa się w spójną historię.",
+            "Karty, które wypadły, budują konkretny obraz sytuacji.",
+            "W tym układzie widać wyraźną linię napięć i możliwości.",
+        ],
+        "advice": [
+            "Przyjmij wskazówki jako lustro, nie jako wyrok.",
+            "Najwięcej zyskasz, jeśli zestawisz karty z tym, co już czujesz intuicyjnie.",
+            "Działaj, ale nie zamykaj oczu na sygnały, które nie pasują do Twojego scenariusza.",
+        ],
+    },
+}
+
+
+def enrich_card_in_context(card: Dict, question: str, theme: str) -> str:
+    """Buduje indywidualny opis karty w kontekście pozycji, orientacji i tematu pytania."""
+    name = card["name_pl"]
+    pos = card["position"]
+    meaning = card["meaning"]
+    rev = card["is_reversed"]
+    guidance = card.get("position_guidance", "")
+
+    orient_note = (
+        "W pozycji odwróconej energia tej karty jest zahamowana, wypaczona albo domaga się integracji cienia."
+        if rev else
+        "W pozycji prostej karta działa w pełni — jej przesłanie jest bezpośrednie i dostępne."
+    )
+
+    # Warianty otwarcia zależne od pozycji
+    pos_openers = {
+        "Przeszłość": f"W przeszłości **{name}** wskazuje, że",
+        "Teraźniejszość": f"Teraz **{name}** mówi, że",
+        "Przyszłość": f"W nadchodzącym czasie **{name}** zapowiada, że",
+        "Twoja odpowiedź": f"Bezpośrednia odpowiedź przez **{name}**:",
+        "Sytuacja obecna": f"W centrum sprawy stoi **{name}** —",
+        "Wyzwanie / przeszkoda": f"Główne wyzwanie, które niesie **{name}**:",
+        "Ostateczny wynik": f"Jako możliwy rezultat **{name}** sugeruje, że",
+        "Twoje podejście": f"Twoje obecne podejście, opisane przez **{name}**:",
+        "Wpływ otoczenia": f"Z zewnątrz działa energia **{name}**:",
+        "Nadzieje i obawy": f"Twoje nadzieje i lęki skupiają się wokół **{name}**:",
+    }
+    opener = pos_openers.get(pos, f"**{name}** w pozycji „{pos}”:")
+
+    # Dopisek tematyczny
+    theme_note = ""
+    if theme == "milosc":
+        theme_note = random.choice([
+            " W relacjach ta energia często objawia się jako sposób, w jaki dajesz i przyjmujesz bliskość.",
+            " W kontekście uczuć warto zobaczyć, czy ta karta opisuje Ciebie, drugą osobę, czy dynamikę między wami.",
+        ])
+    elif theme == "kariera":
+        theme_note = random.choice([
+            " W pracy może to dotyczyć zarówno konkretnego projektu, jak i Twojej postawy wobec odpowiedzialności.",
+            " Zawodowo ta karta często wskazuje na styl działania, nie tylko na zewnętrzne okoliczności.",
+        ])
+    elif theme == "decyzja":
+        theme_note = " Przy wyborze, przed którym stoisz, ta karta jest ważnym głosem — nie jedynym, ale znaczącym."
+
+    body = f"{opener} {meaning.rstrip('.')}."
+    extra = f" {orient_note}"
+    if guidance:
+        extra += f" {guidance}"
+    extra += theme_note
+
+    return body + extra
+
+
+def get_card_combination_note(cards: List[Dict]) -> Optional[str]:
+    """Dodaje unikalną uwagę, gdy w układzie pojawiają się charakterystyczne pary/energie."""
+    names = {c["name_pl"] for c in cards}
+    ids = {c["id"] for c in cards}
+    major = [c for c in cards if c["arcana"] == "Wielkie"]
+    reversed_cards = [c for c in cards if c["is_reversed"]]
+
+    notes = []
+
+    # Klasyczne napięcia
+    if "Wieża" in names and "Wieża" in names:
+        notes.append("Obecność Wieży ostrzega przed nagłym przełomem — czasem koniecznym, by powstało coś nowego.")
+    if "Śmierć" in names:
+        notes.append("Śmierć w układzie rzadko oznacza dosłowny koniec życia — częściej zamknięcie etapu i przestrzeń na odrodzenie.")
+    if "Kochankowie" in names and any(c["name_pl"] in names for c in cards if "Miecz" in c.get("name_pl", "")):
+        notes.append("Kochankowie obok energii mieczy sugerują, że wybór w relacji wymaga chłodniejszej głowy, nie tylko serca.")
+    if "Diabeł" in names:
+        notes.append("Diabeł wskazuje na przywiązanie — do osoby, nawyku, roli lub wygodnego kłamstwa. Uwolnienie zaczyna się od nazwania więzów.")
+    if "Gwiazda" in names and "Księżyc" in names:
+        notes.append("Gwiazda i Księżyc razem: nadzieja miesza się z niepewnością. Zaufaj intuicji, ale sprawdzaj fakty.")
+    if "Słońce" in names and len(reversed_cards) >= 2:
+        notes.append("Słońce w układzie z odwróconymi kartami: jasność jest dostępna, ale coś w Tobie lub w sytuacji jeszcze ją przesłania.")
+
+    # Strukturalne
+    if len(major) >= 3:
+        notes.append(
+            f"Aż {len(major)} Wielkich Arkanów w jednym odczycie — to nie jest zwykła codzienna sprawa. "
+            "Tu grają większe siły: tożsamość, przeznaczenie, głęboka zmiana."
+        )
+    if len(reversed_cards) == len(cards) and len(cards) >= 2:
+        notes.append(
+            "Wszystkie karty odwrócone to silny sygnał: energia stoi, krąży w miejscu albo domaga się wewnętrznej pracy, zanim pójdzie na zewnątrz."
+        )
+    if len(reversed_cards) == 0 and len(cards) >= 3:
+        notes.append(
+            "Żadna karta nie wypadła odwrócona — przepływ jest stosunkowo czysty. To nie znaczy „łatwo”, ale znaczy „dostępne”."
+        )
+
+    # Kolory (suit)
+    suits = [c.get("suit") for c in cards if c.get("suit")]
+    if suits.count("Kielichy") >= 2:
+        notes.append("Dominacja Kielichów: emocje, więzi i potrzeby serca są w tym odczycie na pierwszym planie.")
+    if suits.count("Miecze") >= 2:
+        notes.append("Dużo Mieczy: myśl, konflikt, decyzja i prawda — intelekt i komunikacja grają tu główną rolę.")
+    if suits.count("Buławy") >= 2:
+        notes.append("Buławy w większości: ogień działania, pasja, impuls i wola. Czas ruszyć, nie tylko planować.")
+    if suits.count("Pentakle") >= 2:
+        notes.append("Pentakle dominują: ciało, pieniądze, praca, stabilność i to, co namacalne. Stopy na ziemi.")
+
+    if not notes:
+        return None
+    return random.choice(notes)
+
+
+def get_synthesis(cards: List[Dict], question: str = "") -> str:
+    theme = detect_theme(question)
+    lens = THEME_LENSES.get(theme, THEME_LENSES["ogolny"])
+
     reversed_count = sum(1 for c in cards if c["is_reversed"])
     major_count = sum(1 for c in cards if c["arcana"] == "Wielkie")
     total = len(cards)
 
     parts = []
 
-    # Energia ogólna
+    # Intro zależne od tematu (losowe, by nie było schematycznie)
+    parts.append(random.choice(lens["intro"]))
+
+    # Opis dynamiki układu
     if reversed_count >= total * 0.6:
         parts.append(
-            "W odczycie dominuje energia odwrócona. Może to oznaczać blokady, opóźnienia, "
-            "wewnętrzny opór lub potrzebę zmiany perspektywy. Zamiast forsować działanie, "
-            "warto najpierw zrozumieć, co Cię hamuje."
+            random.choice([
+                "Dominuje energia odwrócona — coś jest zablokowane, opóźnione albo wymaga spojrzenia od drugiej strony.",
+                "Większość kart stoi na głowie: to niekoniecznie „źle”, ale na pewno „inaczej, niż byś chciał”. Czas na korektę kursu.",
+                "Układ pokazuje opór. Zanim pchniesz do przodu, warto zobaczyć, co dokładnie się opiera — i czy to naprawdę wróg.",
+            ])
         )
     elif reversed_count == 0:
         parts.append(
-            "Wszystkie karty wypadły w pozycji prostej. Energia płynie swobodnie i sprzyja działaniu. "
-            "To dobry moment, by podejmować decyzje i iść naprzód z większą pewnością."
+            random.choice([
+                "Wszystkie karty w pozycji prostej: energia jest dostępna i gotowa do użycia.",
+                "Czysty przepływ — karty nie walczą ze sobą orientacją. To sprzyja klarownym decyzjom.",
+            ])
         )
     else:
         parts.append(
-            "Odczyt jest zrównoważony — mieszają się siły wspierające i te, które wymagają uwagi. "
-            "Nie wszystko pójdzie gładko, ale masz wystarczająco dużo zasobów, by poradzić sobie z wyzwaniami."
+            random.choice([
+                "Układ jest mieszany: część energii płynie swobodnie, część wymaga uwagi i dopracowania.",
+                "Nie wszystko jest ustawione idealnie — i właśnie w tym napięciu leży sedno odczytu.",
+            ])
         )
 
     # Wielkie Arkana
     if major_count >= max(1, total * 0.5):
         parts.append(
-            "Silna obecność Wielkich Arkanów wskazuje na ważne, często karmiczne lub przełomowe wydarzenia. "
-            "To nie jest zwykła codzienna sprawa — tu chodzi o głębszą lekcję i transformację."
+            random.choice([
+                "Silna obecność Wielkich Arkanów podnosi stawkę: tu nie chodzi tylko o detal, lecz o kierunek życiowy.",
+                "Wielkie Arkana dominują — temat jest ważniejszy, niż może się wydawać na co dzień.",
+            ])
         )
-    elif major_count == 0:
+    elif major_count == 0 and total >= 3:
         parts.append(
-            "Przewaga Małych Arkanów sugeruje, że sytuacja dotyczy głównie codziennych spraw, "
-            "konkretnych działań i praktycznych decyzji. Skup się na tym, co możesz zrobić tu i teraz."
-        )
-    else:
-        parts.append(
-            "Obecność zarówno Wielkich, jak i Małych Arkanów pokazuje, że duże tematy życiowe "
-            "przenikają się z codziennymi wyborami. Małe kroki prowadzą do większych zmian."
+            "Same Małe Arkana: sprawa dotyczy konkretów, rytmu dnia, relacji i działań, niekoniecznie wielkiego „przeznaczenia”."
         )
 
-    # Rada końcowa
-    if reversed_count > total / 2:
+    # Unikalna nota o kombinacji
+    combo = get_card_combination_note(cards)
+    if combo:
+        parts.append(combo)
+
+    # Krótkie podsumowanie 1–2 kluczowych kart
+    if total >= 1:
+        key = cards[0] if total == 1 else random.choice(cards)
+        orient = "odwrócona" if key["is_reversed"] else "prosta"
         parts.append(
-            "Rada: zwolnij, przyjrzyj się swoim lękom i przekonaniom. Czasem największą siłą jest "
-            "gotowość, by puścić to, co już nie służy."
+            f"Szczególnie wybrzmiewa **{key['name_pl']}** ({key['position']}, {orient}): {key['meaning']}"
         )
-    else:
-        parts.append(
-            "Rada: zaufaj procesowi, ale nie działaj na ślepo. Karty pokazują potencjał — "
-            "Twoja świadoma decyzja zamienia go w rzeczywistość."
-        )
+
+    # Rada tematyczna
+    parts.append(random.choice(lens["advice"]))
 
     return " ".join(parts)
 
 
-def answer_followup(question: str, cards: List[Dict]) -> str:
-    """Generuje odpowiedź na pytanie dodatkowe na podstawie wylosowanych kart."""
+def create_reading(spread_key: str, question: str = "") -> Dict[str, Any]:
+    spread = SPREADS[spread_key]
+    cards = draw_cards(len(spread["positions"]))
+    theme = detect_theme(question)
+
+    reading = {
+        "id": datetime.now().strftime("%Y%m%d_%H%M%S"),
+        "timestamp": datetime.now().isoformat(),
+        "spread": spread_key,
+        "spread_name": spread["name"],
+        "question": question.strip() or "Brak pytania",
+        "theme": theme,
+        "cards": []
+    }
+
+    for i, card in enumerate(cards):
+        pos = spread["positions"][i]
+        card_full = {
+            **card,
+            "position": pos,
+            "position_guidance": POSITION_GUIDANCE.get(pos, "Ta pozycja wnosi ważny kontekst do odczytu."),
+        }
+        card_full["detailed"] = enrich_card_in_context(card_full, reading["question"], theme)
+        reading["cards"].append(card_full)
+
+    reading["synthesis"] = get_synthesis(reading["cards"], reading["question"])
+    return reading
+
+
+def answer_followup(question: str, cards: List[Dict], original_question: str = "") -> str:
     if not question.strip():
-        return "Zadaj konkretne pytanie, a karty podpowiedzą."
+        return "Zadaj konkretne pytanie — im precyzyjniej, tym trafniejsza odpowiedź."
 
-    q = question.lower().strip()
+    theme = detect_theme(question)
+    # Wybierz karty najbardziej „aktywne” — losowo 1-2, ale preferuj te z pozycji kluczowych
+    priority_pos = {"Twoja odpowiedź", "Sytuacja obecna", "Teraźniejszość", "Ostateczny wynik", "Wyzwanie / przeszkoda"}
+    priority = [c for c in cards if c["position"] in priority_pos]
+    pool = priority if priority else cards
+    selected = random.sample(pool, min(2, len(pool)))
 
-    # Wybierz 1-2 najbardziej "pasujące" karty (losowo z puli, ale z kontekstem)
-    selected = random.sample(cards, min(2, len(cards)))
+    intro = random.choice([
+        "W świetle kart, które już masz przed sobą:",
+        "Odnosząc się do tego rozkładu:",
+        "Karty odpowiadają na to dopytanie tak:",
+        "Patrząc ponownie na układ pod kątem Twojego pytania:",
+    ])
 
-    intro_options = [
-        "Patrząc na karty z Twojego odczytu,",
-        "W kontekście tego, co już wypadło,",
-        "Karty, które masz przed sobą, podpowiadają,",
-        "Odnosząc się do energii obecnego rozkładu,",
-    ]
-    intro = random.choice(intro_options)
-
-    card_parts = []
+    lines = [intro, ""]
     for c in selected:
-        orient = "w pozycji odwróconej" if c["is_reversed"] else "w pozycji prostej"
-        card_parts.append(
-            f"**{c['name_pl']}** ({c['position']}, {orient}) mówi: {c['meaning']}"
-        )
+        orient = "odwrócona" if c["is_reversed"] else "prosta"
+        lines.append(f"**{c['name_pl']}** ({c['position']}, {orient})")
+        lines.append(c.get("detailed") or c["meaning"])
+        lines.append("")
 
-    # Dopasowanie tonu do typu pytania
-    if any(w in q for w in ["miłość", "związek", "partner", "uczuc", "serc", "relacj"]):
-        theme = (
-            "W sprawach serca kluczowe jest szczere spojrzenie na siebie i drugą osobę. "
-            "Nie uciekaj od emocji — one są teraz Twoim przewodnikiem."
-        )
-    elif any(w in q for w in ["prac", "karier", "pieniądz", "finans", "zawod", "biznes"]):
-        theme = (
-            "W sferze zawodowej i materialnej liczy się teraz konkret i konsekwencja. "
-            "Unikaj pochopnych decyzji, ale nie bój się też zrobić kroku, gdy pojawia się okazja."
-        )
-    elif any(w in q for w in ["co robić", "jak", "czy powinien", "czy mam", "decyz"]):
-        theme = (
-            "Decyzja, którą rozważasz, wymaga połączenia intuicji z rozsądkiem. "
-            "Karty nie zdejmują z Ciebie odpowiedzialności — one ją rozjaśniają."
-        )
-    elif any(w in q for w in ["kiedy", "czas", "jak długo", "termin"]):
-        theme = (
-            "Czas w tarocie jest płynny. Zamiast szukać konkretnej daty, zwróć uwagę na warunki, "
-            "które muszą się spełnić, zanim coś dojrzeje."
-        )
-    else:
-        theme = (
-            "Odpowiedź leży na przecięciu tego, co już wiesz, i tego, na co karty zwracają uwagę. "
-            "Nie ignoruj subtelnym sygnałów — często są ważniejsze niż głośne wydarzenia."
-        )
+    lens = THEME_LENSES.get(theme, THEME_LENSES["ogolny"])
+    lines.append(random.choice(lens["advice"]))
+    lines.append("")
+    lines.append("*" + random.choice([
+        "Zatrzymaj się na chwilę z tą odpowiedzią — nie wszystko trzeba od razu „rozwiązać”.",
+        "Jeśli coś w tej odpowiedzi mocno rezonuje lub mocno drażni — to zwykle ważny trop.",
+        "Karty otwierają perspektywę; decyzja i odpowiedzialność zostają po Twojej stronie.",
+    ]) + "*")
 
-    closing_options = [
-        "Przyjmij tę wskazówkę z otwartością i sprawdź, jak rezonuje z Twoim wewnętrznym głosem.",
-        "Pamiętaj: karty oświetlają ścieżkę, ale to Ty stawiasz na niej kroki.",
-        "Zatrzymaj się na chwilę z tą odpowiedzią — czasem najwięcej mówi cisza po pytaniu.",
-    ]
-    closing = random.choice(closing_options)
-
-    answer = (
-        f"{intro}\n\n"
-        + "\n\n".join(card_parts)
-        + f"\n\n{theme}\n\n*{closing}*"
-    )
-    return answer
+    return "\n".join(lines)
